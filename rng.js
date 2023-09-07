@@ -1,6 +1,6 @@
 function randomSample(n, min, max, replacement) {
     if (!replacement && n > max - min + 1) {
-      throw new Error('Cannot sample without replacement when n > max - min + 1');
+      throw new Error('Cannot do without replacement when n > max - min + 1');
     }
   
     const sampled = [];
