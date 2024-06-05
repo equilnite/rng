@@ -5,49 +5,227 @@
     <!-- Bootstrap-->
     <link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <link href="/bootstrap/override.css" rel="stylesheet">
 
     <!-- Metadata -->
-    <title>RNG</title>
+    <title>RNG Applet</title>
     <meta charset="UTF-8" />
-    <meta name="description"
-        content="Easy RNG for a sequence of numbers with or without replacement">
+    <meta name="description" content="Easy RNG for a sequence of numbers with or without replacement">
     <meta rel="canonical" href="https://rng.echa.ng">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="/favicon.png">
+
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Icons for PWA -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png">
+
     <script src="/rng.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, function(error) {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+            });
+        }
+    </script>
 </head>
 
 <body>
     <div class="container-md mt-5">
-        <h1 class="mb-4">Random Number Generator</h1>
+        <h1 class="mb-4">Random Sample Generator</h1>
         <form id="randomSampleForm">
-          <div class="row">
-          <div class="mb-3 col-12 col-sm-6">
-            <label for="sampleSize" class="form-label">Sample Size (n)</label>
-            <input type="number" class="form-control font-monospace" id="sampleSize" required>
-          </div>
-          <div class="mb-3 col-12 col-sm-6">
-            <label for="minValue" class="form-label">Minimum Value (min)</label>
-            <input type="number" class="form-control font-monospace" id="minValue" required>
-          </div>
-          <div class="mb-3 col-12 col-sm-6">
-            <label for="maxValue" class="form-label">Maximum Value (max)</label>
-            <input type="number" class="form-control font-monospace" id="maxValue" required>
-          </div>
-          <div class="mb-3 col-12 col-sm-6">
-            <label for="replacement" class="form-label">With Replacement?</label>
-            <select class="form-select" id="replacement" required>
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </select>
-          </div>
-        </div>
-          <button type="button" class="btn btn-primary" onclick="generateRandomSample()">Generate Numbers</button>
+            <div class="row">
+                <div class="mb-3 col-12 col-sm-6">
+                    <label for="distributionType" class="form-label">Distribution Type</label>
+                    <select class="form-select" id="distributionType" required onchange="updateForm()">
+                        <option value="discreteUniform">Discrete Uniform</option>
+                        <option value="population">Specific Population</option>
+                        <option value="normal">Normal</option>
+                        <option value="uniform">Uniform</option>
+                        <option value="probabilityDistribution">Probability Distribution</option>
+                    </select>
+                </div>
+                <div class="mb-3 col-12 col-sm-6">
+                    <label for="sampleSize" class="form-label">Sample Size (n)</label>
+                    <input type="number" class="form-control font-monospace" id="sampleSize" required>
+                </div>
+                <div class="mb-3 col-12 col-sm-6" id="minMaxFields">
+                    <label for="minValue" class="form-label">Minimum Value (min)</label>
+                    <input type="number" class="form-control font-monospace" id="minValue" required>
+                    <label for="maxValue" class="form-label">Maximum Value (max)</label>
+                    <input type="number" class="form-control font-monospace" id="maxValue" required>
+                </div>
+                <div class="mb-3 col-12 col-sm-6" id="normalFields" style="display: none;">
+                    <label for="meanValue" class="form-label">Mean (μ)</label>
+                    <input type="number" class="form-control font-monospace" id="meanValue">
+                    <label for="stdDevValue" class="form-label">Standard Deviation (σ)</label>
+                    <input type="number" class="form-control font-monospace" id="stdDevValue">
+                </div>
+                <div class="mb-3 col-12 col-sm-6" id="populationFields" style="display: none;">
+                    <label for="population" class="form-label">Population (comma-separated values)</label>
+                    <input type="text" class="form-control font-monospace" id="population">
+                </div>
+                <div class="mb-3 col-12 col-sm-6" id="probabilityFields" style="display: none;">
+                    <label for="probabilities" class="form-label">Probabilities (comma-separated values)</label>
+                    <input type="text" class="form-control font-monospace" id="probabilities">
+                </div>
+                <div class="mb-3 col-12 col-sm-6" id="replForm">
+                    <label for="replacement" class="form-label">With Replacement?</label>
+                    <select class="form-select" id="replacement" required>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="generateRandomSample()">Generate Sample</button>
         </form>
         <div class="mt-4">
-          <h2>Random Numbers:</h2>
-          <div id="sampleResult" class="font-monospace"></div>
+            <h2>Random Sample:</h2>
+            <div id="sampleResult" class="font-monospace"></div>
         </div>
+    </div>
 
+    <script>
+        function updateForm() {
+            const distributionType = document.getElementById('distributionType').value;
+            document.getElementById('minMaxFields').style.display = distributionType === 'uniform' || distributionType === 'discreteUniform' ? 'block' : 'none';
+            document.getElementById('normalFields').style.display = distributionType === 'normal' ? 'block' : 'none';
+            document.getElementById('populationFields').style.display = distributionType === 'population' ? 'block' : 'none';
+            document.getElementById('probabilityFields').style.display = distributionType === 'probabilityDistribution' ? 'block' : 'none';
+            document.getElementById('replForm').style.display = distributionType === 'discreteUniform' || distributionType === 'population' || distributionType === 'probabilityDistribution' ? 'block' : 'none';
+        }
+
+        function generateRandomSample() {
+            const distributionType = document.getElementById('distributionType').value;
+            const sampleSize = parseInt(document.getElementById('sampleSize').value);
+            const replacement = document.getElementById('replacement').value === 'true';
+            let sample = [];
+
+            if (distributionType === 'uniform') {
+                const minValue = parseFloat(document.getElementById('minValue').value);
+                const maxValue = parseFloat(document.getElementById('maxValue').value);
+                sample = generateUniformSample(sampleSize, minValue, maxValue, replacement);
+            } else if (distributionType === 'normal') {
+                const meanValue = parseFloat(document.getElementById('meanValue').value);
+                const stdDevValue = parseFloat(document.getElementById('stdDevValue').value);
+                sample = generateNormalSample(sampleSize, meanValue, stdDevValue);
+            } else if (distributionType === 'population') {
+                const population = document.getElementById('population').value.split(',').map(Number);
+                sample = generatePopulationSample(sampleSize, population, replacement);
+            } else if (distributionType === 'discreteUniform') {
+                const minValue = parseInt(document.getElementById('minValue').value);
+                const maxValue = parseInt(document.getElementById('maxValue').value);
+                sample = generateDiscreteUniformSample(sampleSize, minValue, maxValue, replacement);
+            } else if (distributionType === 'probabilityDistribution') {
+                const population = document.getElementById('population').value.split(',').map(Number);
+                const probabilities = document.getElementById('probabilities').value.split(',').map(Number);
+                sample = generateProbabilitySample(sampleSize, population, probabilities, replacement);
+            }
+
+            document.getElementById('sampleResult').innerText = sample.join(', ');
+        }
+
+        function generateUniformSample(n, min, max, replacement) {
+            const sample = [];
+            for (let i = 0; i < n; i++) {
+                const num = Math.random() * (max - min) + min;
+                sample.push(num);
+            }
+            return sample;
+        }
+
+        function generateNormalSample(n, mean, stdDev) {
+            const sample = [];
+            for (let i = 0; i < n; i++) {
+                let u = 0, v = 0;
+                while (u === 0) u = Math.random();
+                while (v === 0) v = Math.random();
+                const num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+                sample.push(mean + stdDev * num);
+            }
+            return sample;
+        }
+
+        function generatePopulationSample(n, population, replacement) {
+            const sample = [];
+            const populationCopy = [...population];
+            for (let i = 0; i < n; i++) {
+                const index = Math.floor(Math.random() * populationCopy.length);
+                sample.push(populationCopy[index]);
+                if (!replacement) {
+                    populationCopy.splice(index, 1);
+                }
+            }
+            return sample;
+        }
+
+        function generateDiscreteUniformSample(n, min, max, replacement) {
+            const sample = [];
+            const range = max - min + 1;
+            const numbers = Array.from({ length: range }, (_, i) => i + min);
+
+            if (replacement) {
+                for (let i = 0; i < n; i++) {
+                    const index = Math.floor(Math.random() * range);
+                    sample.push(numbers[index]);
+                }
+            } else {
+                if (n > range) {
+                    alert("Sample size cannot be greater than the range of numbers without replacement.");
+                    return [];
+                }
+                for (let i = 0; i < n; i++) {
+                    const index = Math.floor(Math.random() * numbers.length);
+                    sample.push(numbers[index]);
+                    numbers.splice(index, 1);
+                }
+            }
+
+            return sample;
+        }
+
+        function generateProbabilitySample(n, population, probabilities, replacement) {
+            const sample = [];
+            const populationCopy = [...population];
+            const cumulativeProbs = [];
+            let sum = 0;
+
+            // Calculate cumulative probabilities
+            for (let i = 0; i < probabilities.length; i++) {
+                sum += probabilities[i];
+                cumulativeProbs.push(sum);
+            }
+
+            for (let i = 0; i < n; i++) {
+                const rand = Math.random() * sum;
+                for (let j = 0; j < cumulativeProbs.length; j++) {
+                    if (rand <= cumulativeProbs[j]) {
+                        sample.push(populationCopy[j]);
+                        if (!replacement) {
+                            populationCopy.splice(j, 1);
+                            probabilities.splice(j, 1);
+                            sum = probabilities.reduce((a, b) => a + b, 0);
+                            cumulativeProbs.length = 0;
+                            for (let k = 0; k < probabilities.length; k++) {
+                                sum += probabilities[k];
+                                cumulativeProbs.push(sum);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            return sample;
+        }
+    </script>
 </body>
+
 
 </html>
